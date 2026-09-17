@@ -17,13 +17,70 @@ class CatalogDetailScreen extends StatefulWidget {
 }
 
 class _CatalogDetailScreenState extends State<CatalogDetailScreen> {
-  // State sederhana untuk memenuhi syarat StatefulWidget:
-  // tombol favorit yang bisa ditoggle.
-  bool _isFavorite = false;
+  // ================== EVENT & STATE ==================
+  // Alur umum di seluruh screen ini selalu sama:
+  // 1. EVENT   -> user menekan sesuatu (tap tombol/icon), dijalankan
+  //               lewat callback seperti onPressed / onTap.
+  // 2. HANDLER -> fungsi (mis. _toggleFavorite, _increment) mengubah
+  //               nilai variabel di dalam State class ini.
+  // 3. setState(() {...}) -> memberi tahu Flutter "data sudah berubah,
+  //               tolong panggil ulang build()".
+  // 4. build() dipanggil ulang -> UI otomatis menampilkan nilai terbaru.
+  // Tanpa setState, perubahan variabel TIDAK akan terlihat di layar,
+  // walau nilainya sudah berubah di memori.
+  // =====================================================
 
+  // --- STATE 1: Wishlist / Favorit ---
+  // isFavorite TIDAK disimpan sebagai variabel lokal biasa, tapi dibaca
+  // langsung dari CatalogHomeScreen.favoriteNames (Set statis) supaya
+  // status wishlist "nempel" ke setiap item dan tetap ada walau
+  // Screen 2 ditutup dan dibuka lagi dari item lain.
+  bool get _isFavorite =>
+      CatalogHomeScreen.favoriteNames.contains(widget.item.name);
+
+  // EVENT: dipanggil saat icon hati di AppBar ditekan.
   void _toggleFavorite() {
     setState(() {
-      _isFavorite = !_isFavorite;
+      if (_isFavorite) {
+        CatalogHomeScreen.favoriteNames.remove(widget.item.name);
+      } else {
+        CatalogHomeScreen.favoriteNames.add(widget.item.name);
+      }
+    });
+
+    // Side-effect dari event (bukan cuma ubah UI): tampilkan notifikasi
+    // singkat lewat SnackBar, contoh event yang memicu aksi lain
+    // selain setState.
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 1),
+        content: Text(
+          _isFavorite
+              ? '${widget.item.name} ditambahkan ke wishlist'
+              : '${widget.item.name} dihapus dari wishlist',
+        ),
+      ),
+    );
+  }
+
+  // --- STATE 2: Jumlah pesanan (quantity stepper) ---
+  // Contoh state "angka" yang beda bentuk dari state boolean di atas,
+  // supaya konsep event & state terlihat dalam bentuk yang lain juga.
+  int _quantity = 1;
+
+  // EVENT: tombol "+" ditekan.
+  void _incrementQuantity() {
+    setState(() {
+      _quantity++;
+    });
+  }
+
+  // EVENT: tombol "-" ditekan. Diberi batas minimal 1 supaya jumlah
+  // pesanan tidak bisa menjadi 0 atau negatif.
+  void _decrementQuantity() {
+    if (_quantity <= 1) return;
+    setState(() {
+      _quantity--;
     });
   }
 
@@ -147,11 +204,75 @@ class _CatalogDetailScreenState extends State<CatalogDetailScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Tombol CTA -> gaya sama seperti "Pilih Paket" sebelumnya
+                  // --- Quantity Stepper: contoh event & state kedua ---
+                  // Row berisi label "Jumlah" di kiri, dan tombol -/angka/+
+                  // di kanan. Nilai _quantity ditampilkan langsung dari
+                  // state, jadi begitu setState dipanggil, angka di
+                  // tengah otomatis ikut berubah.
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Jumlah Pesanan',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF2F3F7),
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.remove_circle_outline),
+                              color: Colors.indigo,
+                              onPressed: _decrementQuantity,
+                            ),
+                            SizedBox(
+                              width: 28,
+                              child: Text(
+                                '$_quantity',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.add_circle_outline),
+                              color: Colors.indigo,
+                              onPressed: _incrementQuantity,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Tombol CTA -> gaya sama seperti "Pilih Paket" sebelumnya.
+                  // Sekarang ikut menampilkan jumlah pesanan dari state,
+                  // sebagai bukti nyata state dipakai, bukan cuma dipajang.
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              '$_quantity x ${item.name} ditambahkan',
+                            ),
+                          ),
+                        );
+                        Navigator.pop(context);
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.indigo,
                         foregroundColor: Colors.white,
@@ -160,7 +281,7 @@ class _CatalogDetailScreenState extends State<CatalogDetailScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text('Kembali ke Katalog'),
+                      child: Text('Pilih Paket ($_quantity)'),
                     ),
                   ),
                 ],

@@ -36,6 +36,12 @@ class CatalogItem {
 class CatalogHomeScreen extends StatelessWidget {
   const CatalogHomeScreen({super.key});
 
+  // "Penyimpanan" wishlist sederhana, disimpan sebagai daftar nama item.
+  // Static di sini supaya nilainya tetap ada (persist) selama aplikasi
+  // berjalan, walau Screen 1 tetap StatelessWidget sesuai requirement.
+  // Disimpan di CatalogItem.name karena itu identifier unik tiap item.
+  static final Set<String> favoriteNames = <String>{};
+
   // Data dummy 3 item katalog.
   static final List<CatalogItem> catalogList = [
     CatalogItem(
@@ -103,116 +109,157 @@ class CatalogHomeScreen extends StatelessWidget {
         centerTitle: true,
       ),
       // ListView berisi 3 cards
-      body: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
-        itemCount: catalogList.length,
-        itemBuilder: (context, index) {
-          final item = catalogList[index];
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 16, top: 8),
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                // Kartu utama -> gaya disamakan dengan PricingCard
-                // (putih, radius 20, shadow lembut)
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 12,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      leading: CircleAvatar(
-                        radius: 24,
-                        backgroundColor: item.pastelColor,
-                        child: Icon(item.icon, color: Colors.indigo),
-                      ),
-                      title: Text(
-                        item.name,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      subtitle: Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          '${item.price} ${item.priceSuffix}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Colors.indigo,
-                          ),
-                        ),
-                      ),
-                      trailing: const Icon(
-                        Icons.arrow_forward_ios,
-                        size: 16,
-                        color: Colors.indigo,
-                      ),
-                      // Stack Navigation: Navigator.push dari Screen 1 ke Screen 2
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                CatalogDetailScreen(item: item),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-
-                // Badge "Populer" -> Stack + Positioned, persis seperti
-                // badge "Rekomendasi" pada PricingCard tugas sebelumnya.
-                if (item.isPopular)
-                  Positioned(
-                    top: -10,
-                    right: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
+      // StatefulBuilder = trik supaya bagian body ini bisa "setState"
+      // (refresh tampilan) tanpa mengubah CatalogHomeScreen menjadi
+      // StatefulWidget. Dipakai khusus untuk merefresh badge wishlist
+      // setelah pengguna kembali dari Screen 2.
+      body: StatefulBuilder(
+        builder: (context, setLocalState) {
+          return ListView.builder(
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+            itemCount: catalogList.length,
+            itemBuilder: (context, index) {
+              final item = catalogList[index];
+              final isFavorite = favoriteNames.contains(item.name);
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16, top: 8),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    // Kartu utama -> gaya disamakan dengan PricingCard
+                    // (putih, radius 20, shadow lembut)
+                    Container(
                       decoration: BoxDecoration(
-                        color: Colors.amber,
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
                           ),
                         ],
                       ),
-                      child: const Text(
-                        'Populer',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          leading: CircleAvatar(
+                            radius: 24,
+                            backgroundColor: item.pastelColor,
+                            child: Icon(item.icon, color: Colors.indigo),
+                          ),
+                          title: Text(
+                            item.name,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              '${item.price} ${item.priceSuffix}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.indigo,
+                              ),
+                            ),
+                          ),
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 16,
+                            color: Colors.indigo,
+                          ),
+                          // Stack Navigation: Navigator.push dari Screen 1 ke Screen 2.
+                          // Event: onTap ditekan -> pindah ke Screen 2 -> saat user
+                          // menekan back dan Future selesai (await), kita panggil
+                          // setLocalState supaya heart badge di card ini ikut update
+                          // kalau status favorit-nya berubah di Screen 2.
+                          onTap: () async {
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    CatalogDetailScreen(item: item),
+                              ),
+                            );
+                            setLocalState(() {});
+                          },
                         ),
                       ),
                     ),
-                  ),
-              ],
-            ),
+
+                    // Badge hati -> indikator wishlist, state-nya berasal dari
+                    // favoriteNames (diisi/dihapus dari Screen 2).
+                    if (isFavorite)
+                      Positioned(
+                        top: -8,
+                        left: 12,
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.15),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.favorite,
+                            size: 14,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ),
+
+                    // Badge "Populer" -> Stack + Positioned, persis seperti
+                    // badge "Rekomendasi" pada PricingCard tugas sebelumnya.
+                    if (item.isPopular)
+                      Positioned(
+                        top: -10,
+                        right: 12,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.amber,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Text(
+                            'Populer',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
           );
         },
       ),
